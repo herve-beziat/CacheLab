@@ -1,0 +1,45 @@
+# =========================================
+# CacheLab - Git Ignore
+# =========================================
+
+# --- Node / NPM ---
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# --- Build output ---
+dist/
+coverage/
+*.log
+
+# --- TypeScript ---
+*.tsbuildinfo
+
+# --- Environment / Configuration ---
+.env
+.env.local
+.env.production
+.env.development
+
+# --- IDE / Editor files ---
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# --- System files ---
+*.bak
+*.tmp
+
+# --- Docker (si tu dockerises plus tard) ---
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# --- Misc ---
+# Les fichiers que tu généreras ou testeras ponctuellement
+test-output/
+*.map

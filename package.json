@@ -1,0 +1,37 @@
+{
+  "name": "cachelab",
+  "version": "1.0.0",
+  "description": "Projet pédagogique — Développement d’un mini-système de cache clé/valeur inspiré de Redis, en Node.js / TypeScript.",
+  "main": "dist/server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node --loader ts-node/esm src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "clean": "rimraf dist"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/herve-beziat/CacheLab.git"
+  },
+  "keywords": [
+    "typescript",
+    "nodejs",
+    "cache",
+    "redis",
+    "key-value-store",
+    "education"
+  ],
+  "author": "Hervé BEZIAT",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/herve-beziat/CacheLab/issues"
+  },
+  "homepage": "https://github.com/herve-beziat/CacheLab#readme",
+  "devDependencies": {
+    "@types/node": "^24.7.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3",
+    "rimraf": "^5.0.5"
+  }
+}

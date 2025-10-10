@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    /* ---- Structure du projet ---- */
+    "rootDir": "./src",         // Dossier des fichiers sources
+    "outDir": "./dist",         // Dossier de sortie des fichiers JS compilés
+
+    /* ---- Environnement ---- */
+    "target": "ES2020",         // Version JS générée (supporte les async/await)
+    "module": "ES2020",         // Format ESM moderne compatible Node.js
+    "moduleResolution": "node", // Résolution des modules comme Node
+    "types": ["node"],          // Active les types Node.js
+    "lib": ["es2020"],          // Inclut les APIs JS modernes
+
+    /* ---- Compilation ---- */
+    "sourceMap": true,          // Génère les .map (utile pour debug)
+    "declaration": false,       // Pas besoin de fichiers .d.ts ici
+    "esModuleInterop": true,    // Autorise import/export plus simples
+    "forceConsistentCasingInFileNames": true,
+
+    /* ---- Qualité & sécurité ---- */
+    "strict": true,             // Active toutes les vérifications TS
+    "noImplicitAny": true,      // Empêche les "any" implicites
+    "skipLibCheck": true        // Ignore la vérification interne des libs
+
+  },
+  "include": ["src"],
+  "exclude": ["node_modules"]
+}
