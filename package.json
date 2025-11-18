@@ -1,7 +1,7 @@
 {
   "name": "cachelab",
   "version": "1.0.0",
-  "description": "Projet pédagogique — Développement d’un mini-système de cache clé/valeur inspiré de Redis, en Node.js / TypeScript.",
+  "description": "Projet pédagogique — Développement dun mini-système de cache clé/valeur inspiré de Redis, en Node.js / TypeScript.",
   "main": "dist/server.js",
   "type": "module",
   "scripts": {
