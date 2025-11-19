@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "node --loader ts-node/esm src/server.ts",
+    "test:hash": "npm run build && node dist/tests/testHashTable.js",
     "build": "tsc",
     "start": "node dist/server.js",
     "clean": "rimraf dist"

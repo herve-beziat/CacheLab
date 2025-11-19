@@ -2,7 +2,6 @@ import { createServer } from "http";
 import { handleRequest } from "./api/route.js";
 
 const PORT = 8080;
-
 const server = createServer(handleRequest);
 
 //Point d'entrée de l'app

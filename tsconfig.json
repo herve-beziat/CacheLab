@@ -6,8 +6,8 @@
 
     /* ---- Environnement ---- */
     "target": "ES2020",         // Version JS générée (supporte les async/await)
-    "module": "ES2020",         // Format ESM moderne compatible Node.js
-    "moduleResolution": "node", // Résolution des modules comme Node
+    "module": "NodeNext",         // Format ESM moderne compatible Node.js
+    "moduleResolution": "NodeNext", // Résolution des modules comme Node
     "types": ["node"],          // Active les types Node.js
     "lib": ["es2020"],          // Inclut les APIs JS modernes
 
