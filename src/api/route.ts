@@ -53,6 +53,25 @@ export async function handleRequest(req: IncomingMessage, res: ServerResponse) {
     return;
   }
 
+  // Endpoint de santé: GET /health
+  if (path === "/health" && method === "GET") {
+    // On peut renvoyer un simple "ok" avec quelques infos utiles
+    const uptimeSeconds = process.uptime(); // temps de fonctionnement du process
+    const stats = store.getStats(); // si tu veux exposer un peu l'état du cache
+
+    sendJson(res, 200, {
+      status: "ok",
+      uptimeSeconds,
+      cache: {
+        size: stats.size,
+        count: stats.count,
+        loadFactor: stats.loadFactor,
+        defaultTtlMs: stats.defaultTtlMs,
+      },
+    });
+    return;
+  }
+
     // Endpoint de monitoring: GET /stats
   if (segments[0] === "stats" && method === "GET") {
     const stats = store.getStats();
