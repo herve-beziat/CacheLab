@@ -212,4 +212,12 @@ export class HashTable {
       }
     }
   }
+  public getStats() {
+    return {
+      size: this.size,
+      count: this.count,
+      loadFactor: this.getLoadFactor(),
+      defaultTtlMs: this.defaultTtlMs,
+    };
+  }
 }

@@ -29,7 +29,7 @@ function readRequestBody(req: IncomingMessage): Promise<string> {
  * Envoie une réponse JSON standardisée
  */
 function sendJson(res: ServerResponse, statusCode: number, payload: unknown) {
-  const json = JSON.stringify(payload);
+  const json = JSON.stringify(payload, null, 2);
   res.statusCode = statusCode;
   res.setHeader("Content-Type", "application/json");
   res.end(json);
@@ -50,6 +50,13 @@ export async function handleRequest(req: IncomingMessage, res: ServerResponse) {
   // Healthcheck simple sur la racine
   if (path === "/" && method === "GET") {
     sendJson(res, 200, { message: "✅ CacheLab API en ligne" });
+    return;
+  }
+
+    // Endpoint de monitoring: GET /stats
+  if (segments[0] === "stats" && method === "GET") {
+    const stats = store.getStats();
+    sendJson(res, 200, stats);
     return;
   }
 
