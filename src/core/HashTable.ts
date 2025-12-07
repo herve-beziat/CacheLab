@@ -9,21 +9,119 @@ export class HashTable {
   private count: number;
 
   constructor(size: number = 8) {
-    this.size = size;     // nombre de buckets (8 par défaut)
-    this.buckets = new Array(size);   // tableau de 8 buckets (tous undefined au départ)
-    this.count = 0;   // aucune clé stockée au départ
-    console.log(`✅ HashTable initialisée avec ${this.size} buckets`);
+    this.size = size; // nombre de buckets (8 par défaut)
+    this.buckets = new Array(size); // tableau de 8 buckets (tous undefined au départ)
+    this.count = 0; // aucune clé stockée au départ
+    console.log(`HashTable initialisée avec ${this.size} buckets`);
   }
 
   // Fonction de hash : transforme une clé en un numéro entre 0 et size-1
-  private hash(key:string): number {
+  private hash(key: string): number {
     let hash = 0;
 
     for (let i = 0; i < key.length; i++) {
-      const code = key.charCodeAt(i);    // code ASCII du caractère
-      hash = (hash + code ) % this.size;  // reste de la division pour rester dans [0...size-1]
+      const code = key.charCodeAt(i); // code ASCII du caractère
+      hash = (hash + code) % this.size; // reste de la division pour rester dans [0...size-1]
     }
 
     return hash;
+  }
+
+  // Ajoute ou met à jour une entrée dans la table de hachage
+  public set(key: string, value: string): void {
+    const index = this.hash(key); // 1) on récupère l'index du bucket
+    let bucket = this.buckets[index]; // 2) on récupère le bucket à cet index
+    if (!bucket) {
+      // 3) si le bucket n'existe pas encore, on le crée
+      bucket = [];
+      this.buckets[index] = bucket; // initialisation du bucket s'il n'existe pas
+    }
+    // 4) on cherche si la clé existe déjà dans le bucket
+    for (let i = 0; i < bucket.length; i++) {
+      const entry = bucket[i];
+      if (entry.key === key) {
+        // Clé trouvée --> on met à jour la valeur
+        entry.value = value;
+        entry.expireAt = null; // Pour le moment on igrone le TTL, donc pas d'expiration
+        return;
+      }
+    }
+
+    // 5) clé non trouvée --> on ajoute une nouvelle entrée
+    const newEntry: Entry = {
+      key,
+      value,
+      expireAt: null, // Pas d'expiration pour le moment
+    };
+    bucket.push(newEntry);
+    this.count++; // nouvelle clé stockée
+  }
+  // Récupère la valeur associée à une clé, ou null si elle n'existe pas
+  public get(key: string): string | null {
+    const index = this.hash(key); // 1) on calcule l'index
+    const bucket = this.buckets[index]; // 2) on récupère le bucket
+
+    // 3) si le bucket n'existe pas, la clé n'existe pas
+    if (!bucket) {
+      return null;
+    }
+
+    // 4) on parcourt le bucket pour chercher la clé
+    for (let i = 0; i < bucket.length; i++) {
+      const entry = bucket[i];
+
+      if (entry.key === key) {
+        // ✔️ clé trouvée → on renvoie la valeur
+        return entry.value;
+      }
+    }
+
+    // 5) si on n'a rien trouvé → la clé n'existe pas
+    return null;
+  }
+
+  // Supprime une entrée. Retourne true si la clé existait, sinon false.
+  public delete(key: string): boolean {
+    const index = this.hash(key); // 1) hash
+    const bucket = this.buckets[index]; // 2) récupérer le bucket
+
+    // 3) bucket vide → clé inexistante
+    if (!bucket) {
+      return false;
+    }
+
+    // 4) rechercher la clé
+    for (let i = 0; i < bucket.length; i++) {
+      if (bucket[i].key === key) {
+        // ✔️ clé trouvée → on supprime
+        bucket.splice(i, 1);
+        this.count--;
+
+        // si le bucket devient vide, on peut éventuellement le laisser vide
+        // ou mettre undefined. (Pour l'instant on le laisse vide)
+        return true;
+      }
+    }
+
+    // 5) clé non trouvée
+    return false;
+  }
+  // Retourne la liste de toutes les clés présentes dans la table
+  public keys(): string[] {
+    const result: string[] = [];
+
+    // Parcours de tous les buckets
+    for (let i = 0; i < this.buckets.length; i++) {
+      const bucket = this.buckets[i];
+
+      if (!bucket) continue; // bucket vide, on passe
+
+      // Parcours de chaque entrée du bucket
+      for (let j = 0; j < bucket.length; j++) {
+        result.push(bucket[j].key);
+      }
+    }
+
+    return result;
   }
 }
