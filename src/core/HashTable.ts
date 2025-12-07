@@ -7,12 +7,14 @@ export class HashTable {
   private buckets: Bucket[];
   private size: number;
   private count: number;
+  private defaultTtlMs : number | null; // TTl global par défaut en ms
 
-  constructor(size: number = 8) {
+  constructor(size: number = 8, defaultTtlMs: number | null = 10_000) {
     this.size = size; // nombre de buckets (8 par défaut)
     this.buckets = new Array(size); // tableau de 8 buckets (tous undefined au départ)
     this.count = 0; // aucune clé stockée au départ
-    console.log(`HashTable initialisée avec ${this.size} buckets`);
+    this.defaultTtlMs = defaultTtlMs; // TTL par défaut : 10 secondes (10000 ms). Mettre à null pour désactiver le TTL.
+    console.log(`HashTable initialisée avec ${this.size} buckets (TTL par défaut : ${this.defaultTtlMs} ms)`);
   }
 
   // Fonction de hash : transforme une clé en un numéro entre 0 et size-1
@@ -27,6 +29,14 @@ export class HashTable {
     return hash;
   }
 
+  // Ajout d'une fonction isExpired pour vérifier si une entrée a expiré
+  private isExpired(entry: Entry): boolean {
+    if (entry.expireAt === null) {
+      return false; // pas de TTl pour cette entrée
+    }
+    return entry.expireAt < Date.now();
+  }
+
   // Ajoute ou met à jour une entrée dans la table de hachage
   public set(key: string, value: string): void {
     const index = this.hash(key); // 1) on récupère l'index du bucket
@@ -36,26 +46,32 @@ export class HashTable {
       bucket = [];
       this.buckets[index] = bucket; // initialisation du bucket s'il n'existe pas
     }
-    // 4) on cherche si la clé existe déjà dans le bucket
+    // 4) calcul de l'expiration pour cette écriture
+    let expireAt: number | null = null;
+    if (this.defaultTtlMs !== null) {
+      expireAt = Date.now() + this.defaultTtlMs;
+    }
+    // 5) on cherche si la clé existe déjà dans le bucket
     for (let i = 0; i < bucket.length; i++) {
       const entry = bucket[i];
       if (entry.key === key) {
-        // Clé trouvée --> on met à jour la valeur
+        // Clé trouvée --> on met à jour la valeur et on réinitialise le TTL
         entry.value = value;
-        entry.expireAt = null; // Pour le moment on igrone le TTL, donc pas d'expiration
+        entry.expireAt = expireAt; // On réinitialise l'expiration
         return;
       }
     }
 
-    // 5) clé non trouvée --> on ajoute une nouvelle entrée
+    // 6) clé non trouvée --> on ajoute une nouvelle entrée
     const newEntry: Entry = {
       key,
       value,
-      expireAt: null, // Pas d'expiration pour le moment
+      expireAt, // Utilisation de la valeur calculée pour l'expiration
     };
     bucket.push(newEntry);
     this.count++; // nouvelle clé stockée
   }
+
   // Récupère la valeur associée à une clé, ou null si elle n'existe pas
   public get(key: string): string | null {
     const index = this.hash(key); // 1) on calcule l'index
@@ -71,7 +87,13 @@ export class HashTable {
       const entry = bucket[i];
 
       if (entry.key === key) {
-        // ✔️ clé trouvée → on renvoie la valeur
+        // ✔️ clé trouvée → on vérifie si elle a expiré
+        if (this.isExpired(entry)) {
+          // entrée expirée → on la supprime et on retourne null
+          bucket.splice(i, 1);
+          this.count--;
+          return null;
+        }
         return entry.value;
       }
     }
@@ -106,6 +128,7 @@ export class HashTable {
     // 5) clé non trouvée
     return false;
   }
+
   // Retourne la liste de toutes les clés présentes dans la table
   public keys(): string[] {
     const result: string[] = [];
@@ -116,9 +139,20 @@ export class HashTable {
 
       if (!bucket) continue; // bucket vide, on passe
 
-      // Parcours de chaque entrée du bucket
-      for (let j = 0; j < bucket.length; j++) {
-        result.push(bucket[j].key);
+      let j = 0;
+      while (j < bucket.length) {
+        const entry = bucket[j];
+
+        if (this.isExpired(entry)) {
+          // on supprime l'entrée expirée
+          bucket.splice(j, 1);
+          this.count--;
+          // on ne fait PAS j++, car le tableau a rétréci
+          continue;
+        }
+
+        result.push(entry.key);
+        j++;
       }
     }
 

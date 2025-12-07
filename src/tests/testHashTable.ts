@@ -45,3 +45,15 @@ console.log("get('city') après delete =>", table.get("city")); // null
 // Test de la fonction keys()
 console.log("=== TEST KEYS ===");
 console.log("keys() =>", table.keys());
+
+// Test du TTL
+console.log("=== TEST TTL ===");
+const ttlTable = new HashTable(8, 2000); // TTL = 2 secondes
+ttlTable.set("temp", "42");
+
+console.log("immédiat, get('temp') =>", ttlTable.get("temp"));
+
+setTimeout(() => {
+  console.log("après 3s, get('temp') =>", ttlTable.get("temp"));
+  console.log("après 3s, keys() =>", ttlTable.keys());
+}, 3000);
