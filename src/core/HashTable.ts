@@ -212,6 +212,7 @@ export class HashTable {
       }
     }
   }
+  // Retourne des statistiques sur la table de hachage
   public getStats() {
     return {
       size: this.size,
@@ -219,5 +220,12 @@ export class HashTable {
       loadFactor: this.getLoadFactor(),
       defaultTtlMs: this.defaultTtlMs,
     };
+  }
+
+  // Supprime toutes les entrées du cache mais garde la même taille de table
+  public clear(): void {
+    this.buckets = new Array(this.size);
+    this.count = 0;
+    console.log("🧹 HashTable vidée (flush de toutes les clés)");
   }
 }

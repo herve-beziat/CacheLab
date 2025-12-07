@@ -93,6 +93,12 @@ export async function handleRequest(req: IncomingMessage, res: ServerResponse) {
       return;
     }
 
+    // DELETE /keys → supprimer toutes les clés
+    if (method === "DELETE" && !keyParam) {
+      handleFlushKeys(res);
+      return;
+    }
+
     // GET /keys → lister toutes les clés (optionnel)
     if (method === "GET" && !keyParam) {
       handleListKeys(res);
@@ -199,6 +205,14 @@ function handleDeleteKey(res: ServerResponse, key: string) {
   }
 
   sendJson(res, 200, { message: "Key deleted", key });
+}
+
+/** * DELETE /keys
+ * Supprimer toutes les clés
+ */
+function handleFlushKeys(res: ServerResponse) {
+  store.clear();
+  sendJson(res, 200, { message: "All keys deleted" });
 }
 
 /**
