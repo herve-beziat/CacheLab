@@ -46,6 +46,20 @@ console.log("get('city') après delete =>", table.get("city")); // null
 console.log("=== TEST KEYS ===");
 console.log("keys() =>", table.keys());
 
+
+
+
+// Test du redimensionnement
+console.log("=== TEST RESIZE ===");
+const tableResize = new HashTable(4, 10_000); // petite table pour tester le resize rapidement
+
+tableResize.set("key1", "value1");
+tableResize.set("key2", "value2");
+tableResize.set("key3", "value3"); // à ce stade, le load factor est de 0.75, le resize doit se déclencher
+
+console.log("Taille après inserts (attendu > 4) :", (tableResize as any).size);
+console.log("Clés dans tableResize:", tableResize.keys());
+
 // Test du TTL
 console.log("=== TEST TTL ===");
 const ttlTable = new HashTable(8, 2000); // TTL = 2 secondes

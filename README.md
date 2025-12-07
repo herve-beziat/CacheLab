@@ -176,7 +176,7 @@ store.set("session_123", "data", 5000); // expire après 5s
 
 Deux mécanismes de suppression :
 1. **Lazy delete** : une clé expirée est supprimée lors d’un `GET`.
-2. **Sweep** : un nettoyage automatique (`sweepExpired()`) s’exécute toutes les 5 secondes.
+2. **Sweep** : un nettoyage automatique (`sweepExpired()`) s’exécute toutes les 5 secondes. ( à venir)
 
 ### 🧹 3. Garbage Collection (GC)
 Le GC parcourt les buckets et supprime les entrées expirées.

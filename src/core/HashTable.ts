@@ -37,6 +37,11 @@ export class HashTable {
     return entry.expireAt < Date.now();
   }
 
+  // Calcule le load factor (facteur de charge) de la table
+  private getLoadFactor(): number {
+    return this.size === 0 ? 0 : this.count / this.size;
+  }
+
   // Ajoute ou met à jour une entrée dans la table de hachage
   public set(key: string, value: string): void {
     const index = this.hash(key); // 1) on récupère l'index du bucket
@@ -70,6 +75,11 @@ export class HashTable {
     };
     bucket.push(newEntry);
     this.count++; // nouvelle clé stockée
+
+    // 7) Vérification du load factor pour un éventuel resize, si le facteur dépasse 0.7, on redimensionne
+    if (this.getLoadFactor() > 0.7) {
+      this.resize();
+    }
   }
 
   // Récupère la valeur associée à une clé, ou null si elle n'existe pas
@@ -157,5 +167,49 @@ export class HashTable {
     }
 
     return result;
+  }
+
+  // Double la taille de la table et réinsère toutes les entrées (rehash)
+  private resize(): void {
+    const oldBuckets = this.buckets;
+    const oldSize = this.size;
+    const newSize = this.size * 2;
+
+    console.log(`🔁 Resize HashTable: ${oldSize} → ${newSize}`);
+
+    // On met à jour la taille et on crée un nouveau tableau de buckets
+    this.size = newSize;
+    this.buckets = new Array(newSize);
+
+    // On NE touche PAS à this.count ici : le nombre d'entrées reste le même.
+    // On ne recalculera pas les TTL, on garde expireAt tel quel.
+
+    // On parcourt tous les anciens buckets
+    for (let i = 0; i < oldBuckets.length; i++) {
+      const bucket = oldBuckets[i];
+      if (!bucket) continue;
+
+      for (let j = 0; j < bucket.length; j++) {
+        const entry = bucket[j];
+
+        // On peut en profiter pour ne pas réinsérer une entrée expirée
+        if (this.isExpired(entry)) {
+          this.count--;
+          continue;
+        }
+
+        // On recalcule l'index avec la nouvelle taille
+        const index = this.hash(entry.key);
+        let newBucket = this.buckets[index];
+
+        if (!newBucket) {
+          newBucket = [];
+          this.buckets[index] = newBucket;
+        }
+
+        // On réinsère l'entrée telle quelle (on ne modifie pas expireAt)
+        newBucket.push(entry);
+      }
+    }
   }
 }
