@@ -1,5 +1,5 @@
 import { ServerResponse } from "http";
-import { store } from "./store.js";
+import { store, metrics } from "./store.js";
 import { sendJson } from "./httpUtils.js";
 
 /**
@@ -34,7 +34,10 @@ export function handleHealth(res: ServerResponse) {
  */
 export function handleStats(res: ServerResponse) {
   const stats = store.getStats();
-  sendJson(res, 200, stats);
+  sendJson(res, 200, {
+    cache: stats,
+    metrics,
+  });
 }
 
 /**

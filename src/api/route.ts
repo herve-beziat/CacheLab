@@ -1,3 +1,5 @@
+import { logInfo, logError } from "./logger.js";
+import { metrics } from "./store.js";
 import { IncomingMessage, ServerResponse } from "http";
 import { sendJson } from "./httpUtils.js";
 import {
@@ -18,6 +20,8 @@ import {
 export async function handleRequest(req: IncomingMessage, res: ServerResponse) {
   const method = req.method || "GET";
   const url = req.url || "/";
+
+  const start = Date.now(); // Pour le logging de la durée
 
   const fullUrl = new URL(url, "http://localhost");
   const path = fullUrl.pathname;
@@ -97,6 +101,22 @@ export async function handleRequest(req: IncomingMessage, res: ServerResponse) {
     sendJson(res, 405, { error: "Method not allowed" });
   } catch (err) {
     console.error("Erreur dans handleRequest:", err);
+    metrics.errorsTotal++;
     sendJson(res, 500, { error: "Internal server error" });
+  } finally {
+    const durationMS = Date.now() - start;
+
+    //mise à jour des métriques
+    metrics.requestsTotal++;
+    const m = method.toUpperCase();
+    metrics.requestsByMethod[m] = (metrics.requestsByMethod[m] || 0) + 1;
+
+    // Logging de la requête
+    logInfo("HTTP request handled", {
+      method,
+      path,
+      statusCode: res.statusCode,
+      durationMS,
+    });
   }
 }
