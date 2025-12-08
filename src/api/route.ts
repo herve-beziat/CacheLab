@@ -1,297 +1,104 @@
 import { IncomingMessage, ServerResponse } from "http";
-import { HashTable } from "../core/hashtable.js";
+import { sendJson } from "./httpUtils.js";
+import {
+  handlePostKeys,
+  handleGetKey,
+  handlePutKey,
+  handleDeleteKey,
+  handleFlushKeys,
+  handleListKeys,
+} from "./keysHandlers.js";
+import {
+  handleRoot,
+  handleHealth,
+  handleStats,
+  handleScan,
+} from "./systemHandlers.js";
 
-// 🧠 Notre "mini Redis" en mémoire
-const store = new HashTable();
-
-/**
- * Lit le body de la requête (en texte brut)
- */
-function readRequestBody(req: IncomingMessage): Promise<string> {
-  return new Promise((resolve, reject) => {
-    let data = "";
-
-    req.on("data", (chunk) => {
-      data += chunk;
-    });
-
-    req.on("end", () => {
-      resolve(data);
-    });
-
-    req.on("error", (err) => {
-      reject(err);
-    });
-  });
-}
-
-/**
- * Envoie une réponse JSON standardisée
- */
-function sendJson(res: ServerResponse, statusCode: number, payload: unknown) {
-  const json = JSON.stringify(payload, null, 2);
-  res.statusCode = statusCode;
-  res.setHeader("Content-Type", "application/json");
-  res.end(json);
-}
-
-/**
- * Fonction principale appelée pour chaque requête HTTP
- */
-export async function handleRequest(req: IncomingMessage, res: ServerResponse) {
+export async function handleRequest(
+  req: IncomingMessage,
+  res: ServerResponse
+) {
   const method = req.method || "GET";
   const url = req.url || "/";
 
-  // On construit une URL complète pour pouvoir utiliser l’API URL
   const fullUrl = new URL(url, "http://localhost");
-  const path = fullUrl.pathname; // ex: "/keys", "/keys/name"
-  const segments = path.split("/").filter(Boolean); // ["keys"], ["keys","name"]
-
-  // Healthcheck simple sur la racine
-  if (path === "/" && method === "GET") {
-    sendJson(res, 200, { message: "✅ CacheLab API en ligne" });
-    return;
-  }
-
-  // Endpoint de santé: GET /health
-  if (path === "/health" && method === "GET") {
-    // On peut renvoyer un simple "ok" avec quelques infos utiles
-    const uptimeSeconds = process.uptime(); // temps de fonctionnement du process
-    const stats = store.getStats(); // si tu veux exposer un peu l'état du cache
-
-    sendJson(res, 200, {
-      status: "ok",
-      uptimeSeconds,
-      cache: {
-        size: stats.size,
-        count: stats.count,
-        loadFactor: stats.loadFactor,
-        defaultTtlMs: stats.defaultTtlMs,
-      },
-    });
-    return;
-  }
-  // Endpoint de scan: GET /scan?cursor=0&limit=10
-  if (segments[0] === "scan" && method === "GET") {
-    handleScan(res, fullUrl);
-    return;
-  }
-
-  // Endpoint de monitoring: GET /stats
-  if (segments[0] === "stats" && method === "GET") {
-    const stats = store.getStats();
-    sendJson(res, 200, stats);
-    return;
-  }
-
-  // On veut seulement gérer les routes qui commencent par /keys
-  if (segments[0] !== "keys") {
-    sendJson(res, 404, { error: "Not found" });
-    return;
-  }
-
-  const keyParam = segments[1]; // undefined pour /keys, ou "name" pour /keys/name
+  const path = fullUrl.pathname;
+  const segments = path.split("/").filter(Boolean);
 
   try {
-    // POST /keys → créer une nouvelle clé/valeur
+    // GET /
+    if (path === "/" && method === "GET") {
+      handleRoot(res);
+      return;
+    }
+
+    // GET /health
+    if (path === "/health" && method === "GET") {
+      handleHealth(res);
+      return;
+    }
+
+    // GET /stats
+    if (segments[0] === "stats" && method === "GET") {
+      handleStats(res);
+      return;
+    }
+
+    // GET /scan
+    if (segments[0] === "scan" && method === "GET") {
+      handleScan(res, fullUrl);
+      return;
+    }
+
+    // À partir d'ici, on ne gère que /keys
+    if (segments[0] !== "keys") {
+      sendJson(res, 404, { error: "Not found" });
+      return;
+    }
+
+    const keyParam = segments[1];
+
+    // POST /keys
     if (method === "POST" && !keyParam) {
       await handlePostKeys(req, res);
       return;
     }
 
-    // GET /keys/:key → récupérer la valeur d'une clé
+    // GET /keys/:key
     if (method === "GET" && keyParam) {
       handleGetKey(res, keyParam);
       return;
     }
 
-    // PUT /keys/:key → modifier la valeur d'une clé existante
+    // PUT /keys/:key
     if (method === "PUT" && keyParam) {
       await handlePutKey(req, res, keyParam);
       return;
     }
 
-    // DELETE /keys/:key → supprimer une clé
+    // DELETE /keys/:key
     if (method === "DELETE" && keyParam) {
       handleDeleteKey(res, keyParam);
       return;
     }
 
-    // DELETE /keys → supprimer toutes les clés
+    // DELETE /keys
     if (method === "DELETE" && !keyParam) {
       handleFlushKeys(res);
       return;
     }
 
-    // GET /keys → lister toutes les clés (optionnel)
+    // GET /keys
     if (method === "GET" && !keyParam) {
       handleListKeys(res);
       return;
     }
 
-    // Si on arrive ici, c’est une méthode non gérée pour /keys
+    // Méthode non autorisée
     sendJson(res, 405, { error: "Method not allowed" });
   } catch (err) {
     console.error("Erreur dans handleRequest:", err);
     sendJson(res, 500, { error: "Internal server error" });
   }
 }
-
-/**
- * POST /keys
- * Body attendu : { "key": "name", "value": "Hervé" }
- */
-async function handlePostKeys(req: IncomingMessage, res: ServerResponse) {
-  const rawBody = await readRequestBody(req);
-
-  let data: any;
-  try {
-    data = rawBody ? JSON.parse(rawBody) : {};
-  } catch {
-    sendJson(res, 400, { error: "Invalid JSON body" });
-    return;
-  }
-
-  const key = data.key;
-  const value = data.value;
-
-  if (typeof key !== "string" || typeof value !== "string") {
-    sendJson(res, 400, { error: "key and value must be strings" });
-    return;
-  }
-
-  // Ici on autorise création + écrasement (comme Redis SET)
-  store.set(key, value);
-
-  sendJson(res, 201, { message: "Key created or updated", key, value });
-}
-
-/**
- * GET /keys/:key
- */
-function handleGetKey(res: ServerResponse, key: string) {
-  const value = store.get(key);
-
-  if (value === null) {
-    sendJson(res, 404, { error: "Key not found" });
-    return;
-  }
-
-  sendJson(res, 200, { key, value });
-}
-
-/**
- * PUT /keys/:key
- * Body attendu : { "value": "nouvelle valeur" }
- */
-async function handlePutKey(
-  req: IncomingMessage,
-  res: ServerResponse,
-  key: string
-) {
-  const rawBody = await readRequestBody(req);
-
-  let data: any;
-  try {
-    data = rawBody ? JSON.parse(rawBody) : {};
-  } catch {
-    sendJson(res, 400, { error: "Invalid JSON body" });
-    return;
-  }
-
-  const value = data.value;
-
-  if (typeof value !== "string") {
-    sendJson(res, 400, { error: "value must be a string" });
-    return;
-  }
-
-  // On vérifie que la clé existe avant de la mettre à jour
-  const existing = store.get(key);
-  if (existing === null) {
-    sendJson(res, 404, { error: "Key not found" });
-    return;
-  }
-
-  store.set(key, value);
-  sendJson(res, 200, { message: "Key updated", key, value });
-}
-
-/**
- * DELETE /keys/:key
- */
-function handleDeleteKey(res: ServerResponse, key: string) {
-  const deleted = store.delete(key);
-
-  if (!deleted) {
-    sendJson(res, 404, { error: "Key not found" });
-    return;
-  }
-
-  sendJson(res, 200, { message: "Key deleted", key });
-}
-
-/** * DELETE /keys
- * Supprimer toutes les clés
- */
-function handleFlushKeys(res: ServerResponse) {
-  store.clear();
-  sendJson(res, 200, { message: "All keys deleted" });
-}
-
-/**
- * GET /keys
- * Lister toutes les clés
- */
-function handleListKeys(res: ServerResponse) {
-  const keys = store.keys();
-  sendJson(res, 200, { keys });
-}
-
-/** * GET /scan?cursor=0&limit=10
- * Itération paginée sur les clés du cache
- */
-function handleScan(res: ServerResponse, url: URL) {
-  const params = url.searchParams;
-
-  const cursor = Number(params.get("cursor") ?? "0");
-  const limit = Number(params.get("limit") ?? "10");
-
-  if (!Number.isInteger(cursor) || cursor < 0 || !Number.isInteger(limit) || limit <= 0) {
-    sendJson(res, 400, { error: "Invalid cursor or limit" });
-    return;
-  }
-
-  // On utilise l'iterator interne pour récupérer toutes les clés TTL-valide
-  const allKeys: string[] = [];
-  for (const entry of store) {
-    allKeys.push(entry.key);
-  }
-
-  const total = allKeys.length;
-
-  if (total === 0) {
-    sendJson(res, 200, {
-      cursor: 0,
-      total: 0,
-      keys: [],
-    });
-    return;
-  }
-
-  // On "pagine" à partir du cursor
-  const slice = allKeys.slice(cursor, cursor + limit);
-
-  // Calcul du prochain cursor
-  let nextCursor = cursor + slice.length;
-  if (nextCursor >= total) {
-    nextCursor = 0; // on repart à 0 si on a atteint la fin
-  }
-
-  sendJson(res, 200, {
-    cursor: nextCursor,
-    total,
-    keys: slice,
-  });
-}
-
