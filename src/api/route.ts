@@ -15,10 +15,7 @@ import {
   handleScan,
 } from "./systemHandlers.js";
 
-export async function handleRequest(
-  req: IncomingMessage,
-  res: ServerResponse
-) {
+export async function handleRequest(req: IncomingMessage, res: ServerResponse) {
   const method = req.method || "GET";
   const url = req.url || "/";
 
@@ -89,9 +86,10 @@ export async function handleRequest(
       return;
     }
 
-    // GET /keys
+    // GET /keys ou GET /keys?prefix=...
     if (method === "GET" && !keyParam) {
-      handleListKeys(res);
+      const prefix = fullUrl.searchParams.get("prefix") ?? undefined;
+      handleListKeys(res, prefix);
       return;
     }
 

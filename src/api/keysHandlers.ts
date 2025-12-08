@@ -109,7 +109,27 @@ export function handleFlushKeys(res: ServerResponse) {
  * GET /keys
  * Lister toutes les clés
  */
-export function handleListKeys(res: ServerResponse) {
-  const keys = store.keys();
-  sendJson(res, 200, { keys });
+export function handleListKeys(res: ServerResponse, prefix?: string) {
+  // Si aucun prefix → on garde le comportement actuel
+  if (!prefix) {
+    const keys = store.keys();
+    sendJson(res, 200, { keys });
+    return;
+  }
+
+  // Avec prefix → on utilise l’iterator pour filtrer
+  const matchedKeys: string[] = [];
+
+  for (const entry of store) {
+    if (entry.key.startsWith(prefix)) {
+      matchedKeys.push(entry.key);
+    }
+  }
+
+  sendJson(res, 200, {
+    prefix,
+    count: matchedKeys.length,
+    keys: matchedKeys,
+  });
 }
+
