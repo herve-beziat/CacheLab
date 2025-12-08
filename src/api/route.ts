@@ -71,8 +71,13 @@ export async function handleRequest(req: IncomingMessage, res: ServerResponse) {
     });
     return;
   }
+  // Endpoint de scan: GET /scan?cursor=0&limit=10
+  if (segments[0] === "scan" && method === "GET") {
+    handleScan(res, fullUrl);
+    return;
+  }
 
-    // Endpoint de monitoring: GET /stats
+  // Endpoint de monitoring: GET /stats
   if (segments[0] === "stats" && method === "GET") {
     const stats = store.getStats();
     sendJson(res, 200, stats);
@@ -242,3 +247,51 @@ function handleListKeys(res: ServerResponse) {
   const keys = store.keys();
   sendJson(res, 200, { keys });
 }
+
+/** * GET /scan?cursor=0&limit=10
+ * Itération paginée sur les clés du cache
+ */
+function handleScan(res: ServerResponse, url: URL) {
+  const params = url.searchParams;
+
+  const cursor = Number(params.get("cursor") ?? "0");
+  const limit = Number(params.get("limit") ?? "10");
+
+  if (!Number.isInteger(cursor) || cursor < 0 || !Number.isInteger(limit) || limit <= 0) {
+    sendJson(res, 400, { error: "Invalid cursor or limit" });
+    return;
+  }
+
+  // On utilise l'iterator interne pour récupérer toutes les clés TTL-valide
+  const allKeys: string[] = [];
+  for (const entry of store) {
+    allKeys.push(entry.key);
+  }
+
+  const total = allKeys.length;
+
+  if (total === 0) {
+    sendJson(res, 200, {
+      cursor: 0,
+      total: 0,
+      keys: [],
+    });
+    return;
+  }
+
+  // On "pagine" à partir du cursor
+  const slice = allKeys.slice(cursor, cursor + limit);
+
+  // Calcul du prochain cursor
+  let nextCursor = cursor + slice.length;
+  if (nextCursor >= total) {
+    nextCursor = 0; // on repart à 0 si on a atteint la fin
+  }
+
+  sendJson(res, 200, {
+    cursor: nextCursor,
+    total,
+    keys: slice,
+  });
+}
+

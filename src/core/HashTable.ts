@@ -7,14 +7,16 @@ export class HashTable {
   private buckets: Bucket[];
   private size: number;
   private count: number;
-  private defaultTtlMs : number | null; // TTl global par défaut en ms
+  private defaultTtlMs: number | null; // TTl global par défaut en ms
 
   constructor(size: number = 8, defaultTtlMs: number | null = 10_000) {
     this.size = size; // nombre de buckets (8 par défaut)
     this.buckets = new Array(size); // tableau de 8 buckets (tous undefined au départ)
     this.count = 0; // aucune clé stockée au départ
     this.defaultTtlMs = defaultTtlMs; // TTL par défaut : 10 secondes (10000 ms). Mettre à null pour désactiver le TTL.
-    console.log(`HashTable initialisée avec ${this.size} buckets (TTL par défaut : ${this.defaultTtlMs} ms)`);
+    console.log(
+      `HashTable initialisée avec ${this.size} buckets (TTL par défaut : ${this.defaultTtlMs} ms)`
+    );
   }
 
   // Fonction de hash : transforme une clé en un numéro entre 0 et size-1
@@ -226,6 +228,36 @@ export class HashTable {
   public clear(): void {
     this.buckets = new Array(this.size);
     this.count = 0;
-    console.log("🧹 HashTable vidée (flush de toutes les clés)");
+    console.log("HashTable vidée (flush de toutes les clés)");
+  }
+
+  // Permet d'itérer sur toutes les entrées de la HashTable
+  // Usage: for (const entry of table.entries()) { ... }
+  public *entries(): IterableIterator<Entry> {
+    for (let i = 0; i < this.buckets.length; i++) {
+      const bucket = this.buckets[i];
+      if (!bucket) continue;
+
+      let j = 0;
+      while (j < bucket.length) {
+        const entry = bucket[j];
+
+        // On nettoie les entrées expirées au passage
+        if (this.isExpired(entry)) {
+          bucket.splice(j, 1);
+          this.count--;
+          continue; // ne pas faire j++ ici, car le tableau a rétréci
+        }
+
+        // On expose l'entrée encore valide
+        yield entry;
+        j++;
+      }
+    }
+  }
+
+  // Rend la HashTable directement itérable avec for...of
+  public [Symbol.iterator](): IterableIterator<Entry> {
+    return this.entries();
   }
 }

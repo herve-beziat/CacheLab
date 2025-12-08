@@ -1,7 +1,7 @@
 import { HashTable } from "../core/hashtable.js";
 
 console.log("=== TEST CONSTRUCTEUR ===");
-const table = new HashTable();  // 8 buckets par défaut
+const table = new HashTable(); // 8 buckets par défaut
 console.log("Instance de HashTable créée:", table);
 
 // Test de la fonction de hash (accès via cast any pour test uniquement)
@@ -29,10 +29,9 @@ console.log("get('job') =>", table.get("job"));
 console.log("get('hello') =>", table.get("hello"));
 console.log("get('unknown') =>", table.get("unknown")); // doit être null
 
-
 // Test de la fonction delete()
 console.log("=== TEST DELETE ===");
-console.log("delete('city') =>", table.delete("city"));   // true
+console.log("delete('city') =>", table.delete("city")); // true
 console.log("delete('unknown') =>", table.delete("unknown")); // false
 
 console.log("Buckets après delete():");
@@ -41,13 +40,9 @@ console.log((table as any).buckets);
 // Vérification : la clé doit avoir disparu
 console.log("get('city') après delete =>", table.get("city")); // null
 
-
 // Test de la fonction keys()
 console.log("=== TEST KEYS ===");
 console.log("keys() =>", table.keys());
-
-
-
 
 // Test du redimensionnement
 console.log("=== TEST RESIZE ===");
@@ -59,6 +54,24 @@ tableResize.set("key3", "value3"); // à ce stade, le load factor est de 0.75, l
 
 console.log("Taille après inserts (attendu > 4) :", (tableResize as any).size);
 console.log("Clés dans tableResize:", tableResize.keys());
+
+// Test de l'itérateur
+console.log("=== TEST ITERATOR ===");
+
+const iterTable = new HashTable(8, 10_000); // TTL 10s
+iterTable.set("name", "Hervé");
+iterTable.set("city", "Mazaugues");
+iterTable.set("job", "Dev web");
+
+console.log("Parcours avec entries():");
+for (const entry of iterTable.entries()) {
+  console.log(`- ${entry.key} = ${entry.value} (expireAt=${entry.expireAt})`);
+}
+
+console.log("Parcours direct avec for...of sur la table:");
+for (const entry of iterTable as any) {
+  console.log(`* ${entry.key} = ${entry.value}`);
+}
 
 // Test du TTL
 console.log("=== TEST TTL ===");
